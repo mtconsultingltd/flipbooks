@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Книга с разворотами</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* ИЗМЕНЕНИЕ 1: ШИРЕ для двух страниц */
+        .flipbook {
+            width: 92vw; /* Было 85vw - ШИРЕ */
+            max-width: 1100px; /* Было 900px - ЗНАЧИТЕЛЬНО ШИРЕ */
+            height: 85vh; /* Немного уменьшили высоту */
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .viewport {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slider {
+            display: flex;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            transition: transform 0.4s ease;
+        }
+
+        /* ОДИНОЧНАЯ СТРАНИЦА */
+        .page {
+            flex: 0 0 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+        }
+
+        /* РАЗВОРОТ */
+        .spread {
+            flex: 0 0 100%;
+            height: 100%;
+            display: flex;
+            background: white;
+        }
+
+        /* ПОЛОВИНА РАЗВОРОТА */
+        .half-page {
+            flex: 0 0 50%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Разделитель между страницами */
+        .half-page::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 10%;
+            bottom: 10%;
+            width: 1px;
+            background: rgba(0,0,0,0.1);
+        }
+
+        .half-page:last-child::after {
+            display: none;
+        }
+
+        /* ИЗМЕНЕНИЕ 2: Картинки в развороте больше */
+        .page img {
+            max-height: 94%; /* Для обложки/конца */
+            max-width: 60%;  /* Уже чтобы центрировалось */
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .half-page img {
+            max-height: 94%; /* БОЛЬШЕ чем было */
+            max-width: 85%;  /* ШИРЕ в пределах половинки */
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 55px;
+            height: 55px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            font-size: 26px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+
+        .arrow:hover {
+            background: #f8f8f8;
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .arrow-left { left: 20px; }
+        .arrow-right { right: 20px; }
+
+        /* ИЗМЕНЕНИЕ 3: Счетчик для двойной нумерации */
+        .counter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: 500;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .flipbook { 
+                width: 96vw; /* На мобильных почти на весь экран */
+                height: 75vh;
+                max-width: 98vw;
+            }
+            .arrow { 
+                width: 45px; 
+                height: 45px; 
+                font-size: 22px; 
+            }
+            .arrow-left { left: 8px; }
+            .arrow-right { right: 8px; }
+            
+            .page img {
+                max-width: 70%; /* На мобильных шире */
+            }
+            
+            .half-page img {
+                max-width: 90%; /* Почти на всю ширину половинки */
+            }
+            
+            .counter {
+                font-size: 13px;
+                padding: 8px 16px;
+                min-width: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="flipbook">
+        <div class="viewport">
+            <div class="slider" id="slider"></div>
+        </div>
+        <button class="arrow arrow-left" id="prevBtn">‹</button>
+        <button class="arrow arrow-right" id="nextBtn">›</button>
+        <div class="counter" id="counter">1 / 70</div>
+    </div>
+
+    <script>
+        // ========== НАСТРОЙКИ ==========
+        const TOTAL_PAGES = 94;
+        const HAS_COVER = true;
+        const HAS_ENDING = true;
+        const IMAGE_FILES = Array.from({length: TOTAL_PAGES}, (_, i) => {
+            return `ne30-${(i + 1).toString().padStart(2, '0')}.jpg`;
+        });
+        
+        // ========== РАСЧЕТ ==========
+        let allSpreads = [];
+        let totalSpreads = 0;
+        let pageNumberMap = {}; // Карта: spreadIndex → [номера страниц]
+        
+        function calculateSpreads() {
+            allSpreads = [];
+            pageNumberMap = {};
+            let imageIndex = 0;
+            let spreadIndex = 0;
+            
+            // 1. Обложка
+            if (HAS_COVER && IMAGE_FILES.length > 0) {
+                allSpreads.push({
+                    type: 'cover',
+                    images: [IMAGE_FILES[0]],
+                    pageNumbers: [1]
+                });
+                pageNumberMap[spreadIndex] = [1];
+                imageIndex = 1;
+                spreadIndex++;
+            }
+            
+            // 2. Основное содержание
+            const startIndex = HAS_COVER ? 1 : 0;
+            const endIndex = HAS_ENDING ? IMAGE_FILES.length - 1 : IMAGE_FILES.length;
+            const contentImages = IMAGE_FILES.slice(startIndex, endIndex);
+            
+            // Вычисляем сколько пар получится
+            const pairsCount = Math.floor(contentImages.length / 2);
+            const remainder = contentImages.length % 2;
+            
+            // Создаем пары
+            for (let i = 0; i < pairsCount; i++) {
+                const leftPageNum = startIndex + (i * 2) + 1;
+                const rightPageNum = leftPageNum + 1;
+                
+                allSpreads.push({
+                    type: 'spread',
+                    images: [contentImages[i*2], contentImages[i*2 + 1]],
+                    pageNumbers: [leftPageNum, rightPageNum]
+                });
+                
+                pageNumberMap[spreadIndex] = [leftPageNum, rightPageNum];
+                spreadIndex++;
+            }
+            
+            // 3. Оставшаяся непарная страница (если есть)
+            if (remainder === 1) {
+                const pageNum = startIndex + (pairsCount * 2) + 1;
+                allSpreads.push({
+                    type: 'single',
+                    images: [contentImages[contentImages.length - 1]],
+                    pageNumbers: [pageNum]
+                });
+                pageNumberMap[spreadIndex] = [pageNum];
+                spreadIndex++;
+            }
+            
+            // 4. Концовка
+            if (HAS_ENDING && IMAGE_FILES.length > 1) {
+                allSpreads.push({
+                    type: 'ending',
+                    images: [IMAGE_FILES[IMAGE_FILES.length - 1]],
+                    pageNumbers: [TOTAL_PAGES]
+                });
+                pageNumberMap[spreadIndex] = [TOTAL_PAGES];
+                spreadIndex++;
+            }
+            
+            totalSpreads = allSpreads.length;
+            
+            console.log('Расчет завершен:', {
+                'Всего разворотов': totalSpreads,
+                'Распределение': allSpreads.map((s, i) => 
+                    `${i+1}. ${s.type} стр.${s.pageNumbers.join('-')}`
+                )
+            });
+            
+            return allSpreads;
+        }
+        
+        // ========== ПЕРЕМЕННЫЕ ==========
+        let currentSpread = 0;
+        let slider = document.getElementById('slider');
+        let counter = document.getElementById('counter');
+        let pageWidth = 0;
+        
+        // ========== СОЗДАНИЕ СТРАНИЦ ==========
+        function createPages() {
+            slider.innerHTML = '';
+            const spreads = calculateSpreads();
+            
+            spreads.forEach((spread, spreadIndex) => {
+                if (spread.type === 'spread') {
+                    // РАЗВОРОТ
+                    const spreadEl = document.createElement('div');
+                    spreadEl.className = 'spread';
+                    spreadEl.dataset.spreadIndex = spreadIndex;
+                    
+                    spread.images.forEach((imgSrc, imgIndex) => {
+                        const halfPage = document.createElement('div');
+                        halfPage.className = 'half-page';
+                        halfPage.dataset.pageNumber = spread.pageNumbers[imgIndex];
+                        
+                        const img = new Image();
+                        img.src = imgSrc;
+                        img.alt = `Страница ${spread.pageNumbers[imgIndex]}`;
+                        
+                        setupImageHandlers(img, imgSrc);
+                        halfPage.appendChild(img);
+                        spreadEl.appendChild(halfPage);
+                    });
+                    
+                    slider.appendChild(spreadEl);
+                } else {
+                    // ОДИНОЧНАЯ
+                    const page = document.createElement('div');
+                    page.className = 'page';
+                    page.dataset.spreadIndex = spreadIndex;
+                    page.dataset.pageNumber = spread.pageNumbers[0];
+                    
+                    const img = new Image();
+                    img.src = spread.images[0];
+                    img.alt = `Страница ${spread.pageNumbers[0]}`;
+                    
+                    setupImageHandlers(img, spread.images[0]);
+                    page.appendChild(img);
+                    slider.appendChild(page);
+                }
+            });
+            
+            setTimeout(() => {
+                updateSliderSize();
+                goToSpread(0);
+                updateCounter();
+            }, 100);
+        }
+        
+        function setupImageHandlers(img, src) {
+            img.onload = () => console.log(`✓ ${src}`);
+            img.onerror = () => {
+                console.error(`✗ ${src}`);
+                img.style.background = '#f0f0f0';
+                img.style.display = 'flex';
+                img.style.alignItems = 'center';
+                img.style.justifyContent = 'center';
+                img.innerHTML = `<div style="color:#999;">${src}</div>`;
+            };
+        }
+        
+        // ========== УПРАВЛЕНИЕ ==========
+        function updateSliderSize() {
+            const viewport = document.querySelector('.viewport');
+            if (!viewport) return;
+            
+            pageWidth = viewport.offsetWidth;
+            slider.style.width = `${totalSpreads * pageWidth}px`;
+            
+            document.querySelectorAll('.page, .spread').forEach(el => {
+                el.style.width = `${pageWidth}px`;
+                el.style.flexBasis = `${pageWidth}px`;
+            });
+        }
+        
+        function goToSpread(index) {
+            if (index < 0 || index >= totalSpreads) return;
+            
+            currentSpread = index;
+            const translateX = -currentSpread * pageWidth;
+            slider.style.transform = `translateX(${translateX}px)`;
+            
+            updateCounter();
+            updateButtons();
+        }
+        
+        function nextSpread() {
+            if (currentSpread < totalSpreads - 1) goToSpread(currentSpread + 1);
+        }
+        
+        function prevSpread() {
+            if (currentSpread > 0) goToSpread(currentSpread - 1);
+        }
+        
+        // ИЗМЕНЕНИЕ 4: Функция для двойной нумерации
+        function updateCounter() {
+            const spread = allSpreads[currentSpread];
+            const pageNumbers = pageNumberMap[currentSpread];
+            
+            let counterText;
+            
+            if (pageNumbers.length === 1) {
+                // Одиночная страница
+                counterText = `${pageNumbers[0]} / ${TOTAL_PAGES}`;
+            } else {
+                // Разворот
+                counterText = `${pageNumbers[0]}-${pageNumbers[1]} / ${TOTAL_PAGES}`;
+            }
+            
+            // Добавляем тип страницы
+            let typeLabel = '';
+            if (spread.type === 'cover') typeLabel = ' (Обложка)';
+            
+            counter.textContent = counterText + typeLabel;
+        }
+        
+        function updateButtons() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            prevBtn.style.opacity = currentSpread === 0 ? '0.5' : '1';
+            nextBtn.style.opacity = currentSpread === totalSpreads - 1 ? '0.5' : '1';
+        }
+        
+        function setupControls() {
+            document.getElementById('prevBtn').onclick = prevSpread;
+            document.getElementById('nextBtn').onclick = nextSpread;
+            
+            document.onkeydown = (e) => {
+                if (e.key === 'ArrowRight') nextSpread();
+                if (e.key === 'ArrowLeft') prevSpread();
+            };
+            
+            // Свайп
+            let startX = 0;
+            const viewport = document.querySelector('.viewport');
+            
+            viewport.ontouchstart = (e) => startX = e.touches[0].clientX;
+            viewport.ontouchend = (e) => {
+                const endX = e.changedTouches[0].clientX;
+                const diff = startX - endX;
+                if (Math.abs(diff) > 50) diff > 0 ? nextSpread() : prevSpread();
+            };
+            
+            window.onresize = () => {
+                updateSliderSize();
+                goToSpread(currentSpread);
+            };
+        }
+        
+        // ========== ЗАПУСК ==========
+        function init() {
+            console.log('=== КНИГА С РАЗВОРОТАМИ ===');
+            console.log('Настройки:', {TOTAL_PAGES, HAS_COVER, HAS_ENDING});
+            
+            createPages();
+            setupControls();
+        }
+        
+        window.onload = init;
+    </script>
+</body>
+</html>
