@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Флипбук</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+    
+        body {
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+    
+        /* ИЗМЕНЕНИЕ 1: Уже для вертикальных страниц */
+        .flipbook {
+            width: 85vw; /* Было 90vw */
+            max-width: 600px; /* Было 800px - СДЕЛАЛИ УЖЕ */
+            height: 88vh; /* Немного увеличили высоту */
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+    
+        .viewport {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+    
+        .slider {
+            display: flex;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            transition: transform 0.4s ease;
+        }
+    
+        .page {
+            flex: 0 0 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+        }
+    
+        /* ИЗМЕНЕНИЕ 2: Картинки занимают больше высоты */
+        .page img {
+            max-height: 96%; /* Было 95% - чуть больше */
+            max-width: 98%; /* Было 95% - шире в пределах */
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+    
+        /* ИЗМЕНЕНИЕ 3: Стрелки ближе к краю */
+        .arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 55px; /* Чуть меньше */
+            height: 55px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            font-size: 26px; /* Чуть меньше */
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+    
+        .arrow:hover {
+            background: #f8f8f8;
+            transform: translateY(-50%) scale(1.05);
+        }
+    
+        .arrow-left { left: 20px; } /* Ближе к краю */
+        .arrow-right { right: 20px; }
+    
+        .counter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+    
+        @media (max-width: 768px) {
+            /* ИЗМЕНЕНИЕ 4: На мобильных еще уже */
+            .flipbook { 
+                width: 92vw; /* Было 95vw */
+                height: 78vh; /* Было 75vh */
+                max-width: 95vw;
+            }
+            .arrow { 
+                width: 45px; 
+                height: 45px; 
+                font-size: 22px; 
+            }
+            .arrow-left { left: 8px; } /* Еще ближе на мобильных */
+            .arrow-right { right: 8px; }
+            
+            /* Картинки на мобильных занимают почти всю высоту */
+            .page img {
+                max-height: 98%;
+                max-width: 99%;
+            }
+        }
+    
+        /* ДОПОЛНИТЕЛЬНО: Для очень высоких экранов */
+        @media (min-height: 1000px) {
+            .flipbook {
+                max-width: 650px; /* Еще уже для высоких экранов */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="flipbook">
+        <div class="viewport">
+            <div class="slider" id="slider">
+                <!-- Страницы будут добавлены автоматически -->
+            </div>
+        </div>
+        <button class="arrow arrow-left" id="prevBtn">‹</button>
+        <button class="arrow arrow-right" id="nextBtn">›</button>
+        <div class="counter" id="counter">1 / 3</div>
+    </div>
+
+    <script>
+        // ========== НАСТРОЙКИ ==========
+        const imageFiles = ['ne30-01.jpg', 'ne30-02.jpg', 'ne30-03.jpg', 'ne30-04.jpg', 'ne30-05.jpg', 'ne30-06.jpg', 'ne30-07.jpg', 'ne30-08.jpg', 'ne30-09.jpg', 'ne30-10.jpg', 'ne30-11.jpg', 'ne30-12.jpg', 'ne30-13.jpg', 'ne30-14.jpg', 'ne30-15.jpg', 'ne30-16.jpg', 'ne30-17.jpg', 'ne30-18.jpg', 'ne30-19.jpg', 'ne30-20.jpg', 'ne30-21.jpg', 'ne30-22.jpg', 'ne30-23.jpg', 'ne30-24.jpg', 'ne30-25.jpg', 'ne30-26.jpg', 'ne30-27.jpg', 'ne30-28.jpg', 'ne30-29.jpg', 'ne30-30.jpg', 'ne30-31.jpg', 'ne30-32.jpg', 'ne30-33.jpg', 'ne30-34.jpg', 'ne30-35.jpg', 'ne30-36.jpg', 'ne30-37.jpg', 'ne30-38.jpg', 'ne30-39.jpg', 'ne30-40.jpg', 'ne30-41.jpg', 'ne30-42.jpg', 'ne30-43.jpg', 'ne30-44.jpg', 'ne30-45.jpg', 'ne30-46.jpg', 'ne30-47.jpg', 'ne30-48.jpg', 'ne30-49.jpg', 'ne30-50.jpg', 'ne30-51.jpg', 'ne30-52.jpg', 'ne30-53.jpg', 'ne30-54.jpg', 'ne30-55.jpg', 'ne30-56.jpg', 'ne30-57.jpg', 'ne30-58.jpg', 'ne30-59.jpg', 'ne30-60.jpg', 'ne30-61.jpg', 'ne30-62.jpg', 'ne30-63.jpg', 'ne30-64.jpg', 'ne30-65.jpg', 'ne30-66.jpg', 'ne30-67.jpg', 'ne30-68.jpg', 'ne30-69.jpg', 'ne30-70.jpg', 'ne30-71.jpg', 'ne30-72.jpg', 'ne30-73.jpg', 'ne30-74.jpg', 'ne30-75.jpg', 'ne30-76.jpg', 'ne30-77.jpg', 'ne30-78.jpg', 'ne30-79.jpg', 'ne30-80.jpg', 'ne30-81.jpg', 'ne30-82.jpg', 'ne30-83.jpg', 'ne30-84.jpg', 'ne30-85.jpg', 'ne30-86.jpg', 'ne30-87.jpg', 'ne30-88.jpg', 'ne30-89.jpg', 'ne30-90.jpg', 'ne30-91.jpg', 'ne30-92.jpg', 'ne30-93.jpg', 'ne30-94.jpg'];
+        let currentIndex = 0;
+        let slider = document.getElementById('slider');
+        let counter = document.getElementById('counter');
+        let pageWidth = 0;
+
+        // ========== СОЗДАНИЕ СТРАНИЦ ==========
+        function createPages() {
+            slider.innerHTML = '';
+            
+            // Проверяем загрузку каждого файла
+            let loadedCount = 0;
+            
+            imageFiles.forEach((filename, index) => {
+                const page = document.createElement('div');
+                page.className = 'page';
+                page.id = `page-${index}`;
+                
+                const img = new Image(); // Используем Image() для контроля загрузки
+                img.src = filename;
+                img.alt = `Страница ${index + 1}`;
+                
+                img.onload = function() {
+                    loadedCount++;
+                    console.log(`Загружено: ${filename} (${loadedCount}/${imageFiles.length})`);
+                    
+                    // Когда ВСЕ картинки загружены
+                    if (loadedCount === imageFiles.length) {
+                        setTimeout(() => {
+                            updateSliderSize();
+                            goToPage(0); // ВАЖНО: показываем ПЕРВУЮ страницу
+                            console.log('Все картинки загружены, показываем первую страницу');
+                        }, 100);
+                    }
+                };
+                
+                img.onerror = function() {
+                    console.error(`ОШИБКА: ${filename} не загружен`);
+                    loadedCount++;
+                    this.style.background = '#f0f0f0';
+                    this.style.display = 'flex';
+                    this.style.alignItems = 'center';
+                    this.style.justifyContent = 'center';
+                    this.innerHTML = `<div style="color:#999; padding:20px;">Страница ${index + 1}<br><small>${filename}</small></div>`;
+                };
+                
+                page.appendChild(img);
+                slider.appendChild(page);
+            });
+        }
+
+        // ========== ОБНОВЛЕНИЕ РАЗМЕРОВ ==========
+        function updateSliderSize() {
+            const viewport = document.querySelector('.viewport');
+            if (!viewport) return;
+            
+            // Ширина ВИДИМОЙ области
+            pageWidth = viewport.offsetWidth;
+            
+            // Ширина слайдера = количество страниц × ширина вьюпорта
+            slider.style.width = `${imageFiles.length * pageWidth}px`;
+            
+            // Каждая страница = ширина вьюпорта
+            document.querySelectorAll('.page').forEach(page => {
+                page.style.width = `${pageWidth}px`;
+                page.style.flexBasis = `${pageWidth}px`; // Дополнительное свойство для Flexbox
+            });
+            
+            console.log('Размеры обновлены:', {
+                'Ширина страницы': pageWidth + 'px',
+                'Ширина слайдера': imageFiles.length * pageWidth + 'px',
+                'Страниц': imageFiles.length
+            });
+        }
+
+        // ========== ПЕРЕХОД К СТРАНИЦЕ ==========
+        function goToPage(index) {
+            if (index < 0 || index >= imageFiles.length) {
+                console.warn('Некорректный индекс страницы:', index);
+                return;
+            }
+            
+            currentIndex = index;
+            
+            // ВАЖНО: принудительно обновляем ширину перед расчетом
+            if (pageWidth === 0) {
+                updateSliderSize();
+            }
+            
+            // Смещение в ПИКСЕЛЯХ
+            const translateX = -currentIndex * pageWidth;
+            slider.style.transform = `translateX(${translateX}px)`;
+            
+            // Обновляем счетчик
+            counter.textContent = `${currentIndex + 1} / ${imageFiles.length}`;
+            
+            // Обновляем кнопки
+            updateButtons();
+            
+            console.log(`Страница ${currentIndex + 1}, смещение: ${translateX}px`);
+            
+            // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: подсвечиваем текущую страницу
+            document.querySelectorAll('.page').forEach((page, i) => {
+                page.style.outline = i === currentIndex ? '2px solid rgba(255,0,0,0.3)' : 'none';
+            });
+        }
+
+        function nextPage() {
+            console.log('Кнопка "Вперед" нажата');
+            if (currentIndex < imageFiles.length - 1) {
+                goToPage(currentIndex + 1);
+            } else {
+                console.log('Это последняя страница');
+            }
+        }
+
+        function prevPage() {
+            console.log('Кнопка "Назад" нажата');
+            if (currentIndex > 0) {
+                goToPage(currentIndex - 1);
+            } else {
+                console.log('Это первая страница');
+            }
+        }
+
+        function updateButtons() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            prevBtn.style.opacity = currentIndex === 0 ? '0.5' : '1';
+            nextBtn.style.opacity = currentIndex === imageFiles.length - 1 ? '0.5' : '1';
+        }
+
+        // ========== УПРАВЛЕНИЕ ==========
+        function setupControls() {
+            // Кнопки
+            document.getElementById('prevBtn').onclick = prevPage;
+            document.getElementById('nextBtn').onclick = nextPage;
+            
+            // Клавиатура
+            document.onkeydown = function(e) {
+                console.log('Клавиша нажата:', e.key);
+                if (e.key === 'ArrowRight') nextPage();
+                if (e.key === 'ArrowLeft') prevPage();
+            };
+            
+            // Свайп
+            let startX = 0;
+            const viewport = document.querySelector('.viewport');
+            
+            viewport.ontouchstart = function(e) {
+                startX = e.touches[0].clientX;
+            };
+            
+            viewport.ontouchend = function(e) {
+                const endX = e.changedTouches[0].clientX;
+                const diff = startX - endX;
+                
+                if (Math.abs(diff) > 50) {
+                    if (diff > 0) nextPage();
+                    else prevPage();
+                }
+            };
+            
+            // Ресайз окна
+            window.onresize = function() {
+                console.log('Окно изменило размер');
+                updateSliderSize();
+                goToPage(currentIndex); // Возвращаемся на текущую страницу
+            };
+        }
+
+        // ========== ЗАПУСК ==========
+        function init() {
+            console.log('=== ИНИЦИАЛИЗАЦИЯ ФЛИПБУКА ===');
+            console.log('Файлы:', imageFiles);
+            
+            createPages();
+            setupControls();
+            
+            // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА через 2 секунды
+            setTimeout(() => {
+                console.log('=== ПРОВЕРКА ЧЕРЕЗ 2 СЕКУНДЫ ===');
+                console.log('Текущий индекс:', currentIndex);
+                console.log('Ширина страницы:', pageWidth);
+                console.log('Смещение слайдера:', slider.style.transform);
+                
+                // Принудительно показываем первую страницу
+                if (currentIndex !== 0) {
+                    console.log('ИСПРАВЛЯЕМ: показываем первую страницу');
+                    goToPage(0);
+                }
+            }, 2000);
+        }
+
+        // Запускаем когда страница полностью загружена
+        window.onload = init;
+    </script>
+</body>
+</html>
+
+
+
