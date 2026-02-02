@@ -152,7 +152,9 @@
 
     <script>
         // ========== НАСТРОЙКИ ==========
-        const imageFiles = ['ee27-01.jpg', 'ee27-02.jpg', 'ee27-03.jpg', 'ee27-04.jpg', 'ee27-05.jpg', 'ee27-06.jpg', 'ee27-07.jpg', 'ee27-08.jpg', 'ee27-09.jpg', 'ee27-10.jpg', 'ee27-11.jpg', 'ee27-12.jpg', 'ee27-13.jpg', 'ee27-14.jpg', 'ee27-15.jpg', 'ee27-16.jpg', 'ee27-17.jpg', 'ee27-18.jpg', 'ee27-19.jpg', 'ee27-20.jpg', 'ee27-21.jpg', 'ee27-22.jpg', 'ee27-23.jpg', 'ee27-24.jpg', 'ee27-25.jpg', 'ee27-26.jpg', 'ee27-27.jpg', 'ee27-28.jpg', 'ee27-29.jpg', 'ee27-30.jpg', 'ee27-31.jpg', 'ee27-32.jpg', 'ee27-33.jpg', 'ee27-34.jpg', 'ee27-35.jpg', 'ee27-36.jpg', 'ee27-37.jpg', 'ee27-38.jpg', 'ee27-39.jpg', 'ee27-40.jpg', 'ee27-41.jpg', 'ee27-42.jpg', 'ee27-43.jpg', 'ee27-44.jpg', 'ee27-45.jpg', 'ee27-46.jpg', 'ee27-47.jpg', 'ee27-48.jpg', 'ee27-49.jpg', 'ee27-50.jpg', 'ee27-51.jpg', 'ee27-52.jpg', 'ee27-53.jpg', 'ee27-54.jpg', 'ee27-55.jpg', 'ee27-56.jpg', 'ee27-57.jpg', 'ee27-58.jpg', 'ee27-59.jpg', 'ee27-60.jpg', 'ee27-61.jpg', 'ee27-62.jpg', 'ee27-63.jpg', 'ee27-64.jpg', 'ee27-65.jpg', 'ee27-66.jpg', 'ee27-67.jpg', 'ee27-68.jpg', 'ee27-69.jpg', 'ee27-70.jpg', 'ee27-71.jpg', 'ee27-72.jpg'];
+        const imageFiles = Array.from({length: 72}, (_, i) => {
+            return `eg27-${(i + 1).toString().padStart(2, '0')}.jpg`;
+        });
         let currentIndex = 0;
         let slider = document.getElementById('slider');
         let counter = document.getElementById('counter');
